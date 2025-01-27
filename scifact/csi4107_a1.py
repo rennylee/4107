@@ -5,35 +5,38 @@ import math
 from collections import defaultdict
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
+
 # Step 1: Preprocessing
 def preprocess(text):
     """
-    Preprocesses a given text: tokenize, remove stopwords, and normalize.
+    Tokenizes, removes stopwords, and normalizes text.
     """
     # Tokenization
     tokens = re.findall(r"\b\w+\b", text.lower())
 
-    # Stopword removal
+    # Remove stopwords
     filtered_tokens = [token for token in tokens if token not in ENGLISH_STOP_WORDS]
 
     return filtered_tokens
 
+
 # Step 2: Build the inverted index
 def build_inverted_index(corpus_path):
     """
-    Builds an inverted index from the Scifact corpus.
+    Builds an inverted index from the corpus.
     """
     inverted_index = defaultdict(list)
     document_lengths = {}  # To store the length of each document (for normalization)
 
     with jsonlines.open(corpus_path) as reader:
-        for doc_id, document in enumerate(reader):
-            
-            title = document.get('title', '')
-            abstract = document.get("abstract", '')
+        for doc in reader:
+            doc_id = doc["_id"]
+            title = doc.get("title", "")
+            text = doc.get("text", "")
 
-            text = title + '' + abstract
-            tokens = preprocess(text)
+            # Combine title and text
+            content = title + " " + text
+            tokens = preprocess(content)
 
             # Calculate term frequency (tf) for this document
             tf = defaultdict(int)
@@ -44,25 +47,27 @@ def build_inverted_index(corpus_path):
             for token, count in tf.items():
                 inverted_index[token].append((doc_id, count))
 
-            # Store the document length
+            # Store document length
             document_lengths[doc_id] = len(tokens)
 
     return inverted_index, document_lengths
 
+
 # Step 3: Calculate IDF values
 def calculate_idf(inverted_index, total_docs):
     """
-    Calculate inverse document frequency (IDF) for each term.
+    Calculates inverse document frequency (IDF) for each term.
     """
     idf = {}
     for term, postings in inverted_index.items():
         idf[term] = math.log(total_docs / len(postings))
     return idf
 
+
 # Step 4: Query processing and ranking
 def rank_documents(query, inverted_index, idf, document_lengths):
     """
-    Rank documents based on cosine similarity with the query.
+    Ranks documents based on cosine similarity with the query.
     """
     # Preprocess the query
     query_tokens = preprocess(query)
@@ -78,7 +83,7 @@ def rank_documents(query, inverted_index, idf, document_lengths):
         if token in idf:
             query_vector[token] = count * idf[token]
 
-    # Rank documents
+    # Calculate scores
     scores = defaultdict(float)
     for token, weight in query_vector.items():
         if token in inverted_index:
@@ -87,46 +92,52 @@ def rank_documents(query, inverted_index, idf, document_lengths):
 
     # Normalize scores by document length
     for doc_id in scores:
-        scores[doc_id] /= document_lengths[doc_id]
+        scores[doc_id] /= max(document_lengths[doc_id], 1e-6)
 
     # Sort documents by score in descending order
     ranked_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return ranked_docs
 
+
 # Main script
 def main():
     # File paths
-    corpus_path = "C:/Users/leeyu/Desktop/4107/scifact/corpus.jsonl"
-    queries_path = "C:/Users/leeyu/Desktop/4107/scifact/corpus.jsonl"
-    results_path = "C:/Users/leeyu/Desktop/4107/scifact/results.txt"
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    corpus_path = os.path.join(current_dir, "corpus.jsonl")
+    queries_path = os.path.join(current_dir, "queries.jsonl")
+    results_path = os.path.join(current_dir, "results.txt")
 
-    # Step 1: Build inverted index
+    # Build inverted index
     print("Building inverted index...")
     inverted_index, document_lengths = build_inverted_index(corpus_path)
     total_docs = len(document_lengths)
 
-    # Step 2: Calculate IDF
+    # Calculate IDF values
     print("Calculating IDF values...")
     idf = calculate_idf(inverted_index, total_docs)
 
-    # Step 3: Process queries and rank documents
+    # Process queries and rank documents
     print("Processing queries...")
     with jsonlines.open(queries_path) as reader:
         queries = list(reader)
 
     with open(results_path, "w") as results_file:
         for query in queries:
-            query_id = query.get('id')
-            query_text = query.get('text', '')
+            query_id = query["_id"]
+            query_text = query.get("text", "")
 
-            if query_id % 2 == 1:
-                ranked_docs = rank_documents(query_text, inverted_index, idf, document_lengths)
+            # Skip if query_text is empty
+            if not query_text:
+                continue
 
-                # Write top-1000 results to the results file
-                for rank, (doc_id, score) in enumerate(ranked_docs[:1000], start=1):
-                    results_file.write(f"{query_id} Q0 {doc_id} {rank} {score:.4f} run_name\n")
+            ranked_docs = rank_documents(query_text, inverted_index, idf, document_lengths)
+
+            # Write top-1000 results to the results file
+            for rank, (doc_id, score) in enumerate(ranked_docs[:1000], start=1):
+                results_file.write(f"{query_id} Q0 {doc_id} {rank} {score:.4f} run_name\n")
 
     print(f"Results saved to {results_path}")
+
 
 if __name__ == "__main__":
     main()
