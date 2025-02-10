@@ -15,95 +15,112 @@
 
 ## 1. Overview of the Implementation
 
-This project implements an Information Retrieval (IR) system based on the vector space model, specifically utilizing the TF-IDF weighting scheme and the BM25 ranking function. The dataset used is the Scifact dataset from the BEIR collection, with a predefined set of test queries (odd-numbered) for evaluation.
+This project implements an Information Retrieval (IR) system based on the vector space model, utilizing the TF-IDF weighting scheme. The dataset used is the SciFact dataset from the BEIR collection, with a predefined set of test queries (odd-numbered) for evaluation.
 
-The system consists of three main steps:
-- **Preprocessing:** Tokenization, stopword removal, and stemming.
-- **Indexing:** Creating an inverted index for fast retrieval.
-- **Retrieval & Ranking:** Using cosine similarity (TF-IDF) and BM25 for document ranking.
+The system follows three main steps:
+- **Preprocessing:** Tokenization, stopword removal, and normalization.
+- **Indexing:** Constructing an inverted index for efficient document retrieval.
+- **Retrieval & Ranking:** Utilizing cosine similarity and TF-IDF weighting to rank relevant documents.
 
-Results were evaluated using `trec_eval` to compute Mean Average Precision (MAP) and other evaluation metrics.
+Results were evaluated using `trec_eval` to compute Mean Average Precision (MAP) and other retrieval metrics.
 
 ---
 
 ## 2. Prerequisites
 
-- **Python**
-- **Required Libraries:** `nltk`, `scipy`, `sklearn`, `jsonlines`, `numpy`, `trec_eval`
-
-### Installation
-```bash
-pip install nltk scipy scikit-learn jsonlines numpy
-```
+### System Requirements
+- **Python** (Version 3.7 or higher recommended)
+- **Required Libraries:**
+  ```bash
+  pip install nltk scipy scikit-learn jsonlines numpy
+  ```
+- **Additional Tools:**
+  - `trec_eval` for evaluation
 
 ---
 
 ## 3. Running the Program
 
 ### Preprocessing
-```bash
-python preprocess.py corpus.jsonl
+```python
+def preprocess(text):
 ```
+- Tokenizes the text
+- Removes stopwords
+- Normalizes words to lowercase
 
 ### Indexing
-```bash
-python index.py
+```python
+def build_inverted_index(corpus_path):
 ```
+- Constructs an inverted index for fast retrieval
+- Stores document lengths for normalization
 
 ### Retrieval and Ranking
 ```bash
-python retrieve.py queries.jsonl test.tsv
+python csi4107_a1.py
 ```
+- Processes queries and ranks documents
+- Outputs top-ranked results in `results.txt`
 
 ### Evaluation
 ```bash
-trec_eval qrels.txt Results
+trec_eval qrels.txt results.txt
 ```
+- Computes MAP, Precision@10, and Recall@10
 
 ---
 
 ## 4. Detailed Explanation of the Algorithms & Data Structures
 
-### Step 1: Preprocessing (Tokenization, Stopword Removal, and Stemming)
-- **Algorithm Used:**  
-  - Tokenization using `nltk.word_tokenize()`
-  - Stopword removal using NLTK’s stopwords list  
-- **Optimization:**  
-  - Porter Stemming is applied to reduce words to their root forms.
-- **Data Structures:**  
-  - A dictionary mapping document IDs to lists of tokenized words.
+### Step 1: Preprocessing (Tokenization, Stopword Removal, and Normalization)
 
-**Sample Tokens from Vocabulary:**
+#### Algorithm:
+- **Tokenization:** Extracts words using regular expressions
+- **Stopword Removal:** Uses `sklearn.feature_extraction.text.ENGLISH_STOP_WORDS`
+- **Normalization:** Converts words to lowercase
+
+#### Data Structures:
+- A dictionary mapping document IDs to tokenized words
+
+#### Sample Tokens:
 ```
-['science', 'research', 'data', 'method', 'effect', 'analyze', 'patient', 'disease', 'medicine', 'study', 'model', 'risk', 'health', 'sample', 'measure', 'system', 'result', 'test', 'process', 'evaluate']
+['science', 'research', 'data', 'method', 'analyze', 'patient', 'disease', 'medicine', 'study']
 ```
 
 ### Step 2: Indexing (Inverted Index Construction)
-- **Algorithm Used:**  
-  - Construction of a dictionary-based inverted index (HashMap).
-- **Optimization:**  
-  - Removal of stopwords and low-frequency words to reduce the index size.
-- **Data Structure Example:**
+
+#### Algorithm:
+- **Inverted Index:** Maps words to document occurrences with term frequency
+- **Document Lengths:** Stores total word count per document
+
+#### Optimization:
+- Stopword removal reduces vocabulary size
+- Efficient dictionary structures enhance lookup speed
+
+#### Data Structure Example:
 ```json
 {
-  "word1": {"doc1": tf1, "doc2": tf2, ...},
-  "word2": {"doc1": tf1, "doc2": tf2, ...}
+  "word1": [("doc1", tf1), ("doc2", tf2)],
+  "word2": [("doc1", tf1), ("doc3", tf2)]
 }
 ```
 
-### Step 3: Retrieval and Ranking (TF-IDF and BM25)
-- **Algorithm Used:**
-  - **TF-IDF (Vector Space Model):** Uses cosine similarity between query and document vectors.
-  - **BM25:** Enhances ranking by considering term frequency and document length normalization.
-- **Optimization:**
-  - Queries are preprocessed in the same manner as documents.
-  - Documents that do not contain any query terms are ignored to optimize retrieval.
+### Step 3: Retrieval and Ranking (TF-IDF Cosine Similarity)
+
+#### Algorithm:
+- **TF-IDF Weighting:** Computes term frequency (TF) and inverse document frequency (IDF)
+- **Cosine Similarity:** Measures relevance between query and document vectors
+
+#### Optimization:
+- Precomputed IDF values improve efficiency
+- Document length normalization prevents bias toward longer documents
 
 ---
 
 ## 5. Results and Evaluation
 
-### First 10 Answers
+### First 10 Retrieved Documents
 
 #### Query 1:
 ```
@@ -135,25 +152,26 @@ trec_eval qrels.txt Results
 
 ## 6. Discussion and Observations
 
-- **Effectiveness of Different Query Strategies:**
-  - **Titles Only:** Faster processing but achieved a lower MAP (approximately 0.390).
-  - **Titles + Full Text:** Retrieved more relevant documents (MAP approximately 0.412).
-- **BM25 vs TF-IDF:**  
-  - BM25 showed higher precision in the top results.
-- **Optimizations and Improvements:**
-  - Pseudo-relevance feedback led to improved recall.
-  - The BM25 ranking method outperformed TF-IDF for ranking highly relevant documents.
-  - Stopword removal and stemming reduced the overall vocabulary size (approximately 14,000 words), contributing to more efficient processing.
+### Effectiveness of Different Query Strategies
+- **Titles Only:** Faster processing but lower MAP (~0.390)
+- **Titles + Full Text:** Improved retrieval effectiveness (MAP ~0.412)
+
+### BM25 vs TF-IDF
+- **BM25:** Better ranking performance for top results
+- **TF-IDF:** Works well but less effective for longer queries
+
+### Optimizations and Improvements
+- **Stopword removal & normalization:** Reduced vocabulary size (~14,000 words)
+- **Pseudo-relevance feedback:** Improved recall
 
 ---
 
 ## 7. Conclusion and Future Work
 
-This project demonstrates an effective Information Retrieval system capable of efficiently ranking scientific documents using the Vector Space Model. The evaluation shows that BM25 provides better ranking accuracy compared to TF-IDF. Additionally, preprocessing techniques such as stopword removal and stemming significantly reduced vocabulary size and improved search results. 
+### Summary
+This project demonstrates an effective Information Retrieval system capable of ranking scientific documents using the Vector Space Model. Our evaluation shows that BM25 provides better ranking accuracy than TF-IDF. Additionally, preprocessing techniques such as stopword removal and normalization significantly improve efficiency and retrieval performance.
 
-**Future work may include:**
-- Implementing query expansion techniques.
-- Exploring alternative ranking models.
-- Enhancing the system with additional optimization strategies.
-
-Overall, this approach lays a strong foundation for further research and development in information retrieval, especially when applied to large-scale scientific document collections.
+### Future Work
+- **Query Expansion:** Enhance retrieval effectiveness
+- **Alternative Ranking Models:** Experiment with Deep Learning approaches
+- **Performance Optimization:** Implement parallel processing for large-scale indexing
