@@ -65,7 +65,7 @@ python csi4107_a1.py
 
 ### Evaluation
 ```bash
-trec_eval qrels.txt results.txt
+trec_eval [qrels] [results]
 ```
 - Computes MAP, Precision@10, and Recall@10
 
