@@ -6,8 +6,7 @@
 - **300193473 Kajan Rajakumar**
 
 ## Division of Tasks
-- **Preprocessing:** Yu-Chen Lee  
-- **Indexing:** Yu-Chen Lee  
+- **Preprocessing and Indexing:** Yu-Chen Lee 
 - **Retrieval and Ranking:** Edward He  
 - **Evaluation and Report Writing:** Kajan Rajakumar
 
